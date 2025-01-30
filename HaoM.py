@@ -152,7 +152,6 @@ class Trgbt:
                 elif self.last_key == 0x44:  # if d
                     snd_counter_strafe_a(self.pipe)  # a
                 
-                t.sleep(0.1)
                 self.keys_pressed = False
                 self.last_key = None
 
