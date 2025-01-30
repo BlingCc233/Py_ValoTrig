@@ -1,6 +1,6 @@
 {
     "fov": 6.5,
-    "keybind": 16,
+    "keybind": 160,
     "shooting_rate": 500,
     "fps": 165.0,
     "hsv_range": [
