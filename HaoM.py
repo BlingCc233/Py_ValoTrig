@@ -50,7 +50,7 @@ def toggle_hold_mode():
 def cl():
     os.system('cls' if os.name == 'nt' else 'clear')
     console = win32gui.GetForegroundWindow()
-    # win32gui.ShowWindow(console, win32con.SW_HIDE)
+    win32gui.ShowWindow(console, win32con.SW_HIDE)
 
 
 # Function to simulate keyboard events
