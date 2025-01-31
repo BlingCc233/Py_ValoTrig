@@ -63,12 +63,6 @@ def kbd_evt(pipe):
                 keybd_event(0x4F, 0, 0, 0)  # O key press
                 t.sleep(0.18 + np.random.uniform(0, 0.02))  # Sleep for 180~200ms
                 keybd_event(0x4F, 0, 2, 0)  # O key release
-            elif key == b'\x02':  # counter strafe A
-                keybd_event(0x41, 0, 0, 0)  # A key press
-                keybd_event(0x41, 0, 2, 0)  # A key release
-            elif key == b'\x03':  # counter strafe D
-                keybd_event(0x44, 0, 0, 0)  # D key press
-                keybd_event(0x44, 0, 2, 0)  # D key release
         except EOFError:
             break
 
@@ -76,13 +70,6 @@ def kbd_evt(pipe):
 # Helper function to send key press
 def snd_key_evt(pipe):
     pipe.send(b'\x01')
-    
-def snd_counter_strafe_a(pipe):
-    pipe.send(b'\x02')
-
-def snd_counter_strafe_d(pipe):
-    pipe.send(b'\x03')
-
 
 
 # Triggerbot class that contains the main logic
@@ -105,8 +92,6 @@ class Trgbt:
         self.shooting_rate = shooting_rate
         self.frame_duration = 1 / fps  # FPS to frame duration in seconds
         self.keys_pressed = False
-        self.last_key = None
-
 
     def capture_frame(self):
         while True:
@@ -132,32 +117,18 @@ class Trgbt:
     def trigger(self):
         global HoldMode
         while True:
-            w_pressed = wapi.GetAsyncKeyState(0x57) < 0
-            a_pressed = wapi.GetAsyncKeyState(0x41) < 0
-            s_pressed = wapi.GetAsyncKeyState(0x53) < 0
-            d_pressed = wapi.GetAsyncKeyState(0x44) < 0
-            
-            if w_pressed or a_pressed or s_pressed or d_pressed:
-                if a_pressed:
-                    self.last_key = 0x41
-                elif d_pressed:
-                    self.last_key = 0x44
+            if wapi.GetAsyncKeyState(0x57) < 0 or wapi.GetAsyncKeyState(0x41) < 0 or wapi.GetAsyncKeyState(
+                    0x53) < 0 or wapi.GetAsyncKeyState(0x44) < 0:
                 self.keys_pressed = True
                 continue
             elif self.keys_pressed:
-                if self.last_key == 0x41:  # if a
-                    snd_counter_strafe_d(self.pipe)  # d
-                elif self.last_key == 0x44:  # if d
-                    snd_counter_strafe_a(self.pipe)  # a
-                
+                t.sleep(0.1)  # Sleep for key_up_rec_time
                 self.keys_pressed = False
-                self.last_key = None
 
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
-                if self.detect_color():
+                if (self.detect_color()):
                     snd_key_evt(self.pipe)
-                    t.sleep(self.shooting_rate / 1000)
-                
+                    t.sleep(self.shooting_rate / 1000)  # Convert ms to seconds
             t.sleep(0.001)
 
 
