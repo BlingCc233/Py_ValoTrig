@@ -1,8 +1,8 @@
-#2686186576886905604698
-#4738117133721163294302
-#1324330963635456269773
-#3397120260856189693435
-#7618502194193879589108
+#8150652813178998285931
+#5891167545071807663376
+#2332640935245508383090
+#1201628357695123503289
+#5903704151525355500585
 import cv2 as c2
 import time as t
 import numpy as np
@@ -19,11 +19,13 @@ import uuid
 import win32gui
 import win32process
 import win32con
+import pythoncom
 
 
-# UUID = "47e7190783f44aa5806c1f9bf7d8ead1"
+
+# UUID = "577eec55a1344625bb1b30886ab5137e"
 # Number lines can be added here
-# UUID = "47e7190783f44aa5806c1f9bf7d8ead1"
+# UUID = "577eec55a1344625bb1b30886ab5137e"
 
 HoldMode = True
 
@@ -63,11 +65,10 @@ def kbd_evt(pipe):
                 keybd_event(0x4F, 0, 0, 0)  # O key press
                 t.sleep(0.18 + np.random.uniform(0, 0.02))  # Sleep for 180~200ms
                 keybd_event(0x4F, 0, 2, 0)  # O key release
-            elif key == b'\x02':  # counter strafe A
+            elif key == b'\x02':  # counter strafe AD
                 keybd_event(0x41, 0, 0, 0)  # A key press
-                keybd_event(0x41, 0, 2, 0)  # A key release
-            elif key == b'\x03':  # counter strafe D
                 keybd_event(0x44, 0, 0, 0)  # D key press
+                keybd_event(0x41, 0, 2, 0)  # A key release
                 keybd_event(0x44, 0, 2, 0)  # D key release
         except EOFError:
             break
@@ -77,11 +78,8 @@ def kbd_evt(pipe):
 def snd_key_evt(pipe):
     pipe.send(b'\x01')
     
-def snd_counter_strafe_a(pipe):
+def snd_counter_strafe(pipe):
     pipe.send(b'\x02')
-
-def snd_counter_strafe_d(pipe):
-    pipe.send(b'\x03')
 
 
 
@@ -105,8 +103,7 @@ class Trgbt:
         self.shooting_rate = shooting_rate
         self.frame_duration = 1 / fps  # FPS to frame duration in seconds
         self.keys_pressed = False
-        self.last_key = None
-
+        self.compensating = False
 
     def capture_frame(self):
         while True:
@@ -132,6 +129,10 @@ class Trgbt:
     def trigger(self):
         global HoldMode
         while True:
+            if self.compensating: 
+                t.sleep(0.001)
+                continue
+
             w_pressed = wapi.GetAsyncKeyState(0x57) < 0
             a_pressed = wapi.GetAsyncKeyState(0x41) < 0
             s_pressed = wapi.GetAsyncKeyState(0x53) < 0
@@ -145,19 +146,19 @@ class Trgbt:
                 self.keys_pressed = True
                 continue
             elif self.keys_pressed:
-                if self.last_key == 0x41:  # if a
-                    snd_counter_strafe_d(self.pipe)  # d
-                elif self.last_key == 0x44:  # if d
-                    snd_counter_strafe_a(self.pipe)  # a
+                if self.last_key in [0x41, 0x44]:  
+                    self.compensating = True  
+                    snd_counter_strafe(self.pipe)  
+                    t.sleep(0.02)  
+                    self.compensating = False  
                 
                 self.keys_pressed = False
                 self.last_key = None
 
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
-                if self.detect_color():
+                if (self.detect_color()):
                     snd_key_evt(self.pipe)
-                    t.sleep(self.shooting_rate / 1000)
-                
+                    t.sleep(self.shooting_rate / 1000)  # Convert ms to seconds
             t.sleep(0.001)
 
 
@@ -170,32 +171,37 @@ def load_cfg():
 
 
 if __name__ == "__main__":
+    pythoncom.CoInitialize()
+    try:
+        set_window_title()
+        cl()
 
-    set_window_title()
-    cl()
+        parent_conn, child_conn = p()
+        p_proc = proc(target=kbd_evt, args=(child_conn,))
+        p_proc.start()
 
-    parent_conn, child_conn = p()
-    p_proc = proc(target=kbd_evt, args=(child_conn,))
-    p_proc.start()
+        # Load or create the configuration
+        cfg = {}
+        if os.path.exists('config.json'):
+            cfg = load_cfg()
+            print("Config loaded:")
+            print(js.dumps(cfg, indent=4))
+        else:
+            exit(0)
 
-    # Load or create the configuration
-    cfg = {}
-    if os.path.exists('config.json'):
-        cfg = load_cfg()
-        print("Config loaded:")
-        print(js.dumps(cfg, indent=4))
-    else:
-        exit(0)
+        # Initialize and start the Triggerbot
+        trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
+        th.Thread(target=trgbt.capture_frame).start()
+        th.Thread(target=trgbt.trigger).start()
+        th.Thread(target=toggle_hold_mode).start()
+        p_proc.join()
+    
+    finally:
+        pythoncom.CoUninitialize()
 
-    # Initialize and start the Triggerbot
-    trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
-    th.Thread(target=trgbt.capture_frame).start()
-    th.Thread(target=trgbt.trigger).start()
-    th.Thread(target=toggle_hold_mode).start()
-    p_proc.join()
 
-#1176949343169135057719
-#6806720406002702760748
-#4063918400340015092434
-#1606719867997230306836
-#6366368272422377873386
+#2732909071539711890778
+#3996159448481102881626
+#2684554981793375453008
+#1777207966950145096245
+#2941445331211873215082
