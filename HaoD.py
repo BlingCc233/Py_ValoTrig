@@ -65,11 +65,9 @@ def kbd_evt(pipe):
                 keybd_event(0x4F, 0, 2, 0)  # O key release
             elif key == b'\x02':  # counter strafe A
                 keybd_event(0x41, 0, 0, 0)  # A key press
-                t.sleep(0.01)  # Short delay
                 keybd_event(0x41, 0, 2, 0)  # A key release
             elif key == b'\x03':  # counter strafe D
                 keybd_event(0x44, 0, 0, 0)  # D key press
-                t.sleep(0.01)  # Short delay
                 keybd_event(0x44, 0, 2, 0)  # D key release
         except EOFError:
             break
@@ -152,7 +150,6 @@ class Trgbt:
                 elif self.last_key == 0x44:  # if d
                     snd_counter_strafe_a(self.pipe)  # a
                 
-                t.sleep(0.1)
                 self.keys_pressed = False
                 self.last_key = None
 
