@@ -1,8 +1,6 @@
 #8150652813178998285931
 #5891167545071807663376
-#2332640935245508383090
 #1201628357695123503289
-#5903704151525355500585
 import cv2 as c2
 import time as t
 import numpy as np
@@ -16,6 +14,7 @@ import os as os
 import json as js
 import uuid
 
+#2332640935245508383090
 import win32gui
 import win32process
 import win32con
@@ -25,7 +24,6 @@ import pythoncom
 
 # UUID = "577eec55a1344625bb1b30886ab5137e"
 # Number lines can be added here
-# UUID = "577eec55a1344625bb1b30886ab5137e"
 
 HoldMode = True
 
@@ -65,7 +63,7 @@ def kbd_evt(pipe):
                 keybd_event(0x4F, 0, 0, 0)  # O key press
                 t.sleep(0.18 + np.random.uniform(0, 0.02))  # Sleep for 180~200ms
                 keybd_event(0x4F, 0, 2, 0)  # O key release
-            elif key == b'\x02':  # counter strafe AD
+            elif key == b'\x02':  #1777207966950145096245
                 keybd_event(0x41, 0, 0, 0)  # A key press
                 keybd_event(0x44, 0, 0, 0)  # D key press
                 keybd_event(0x41, 0, 2, 0)  # A key release
@@ -82,8 +80,8 @@ def snd_counter_strafe(pipe):
     pipe.send(b'\x02')
 
 
+# UUID = "577eec55a1344625bb1b30886ab5137e"
 
-# Triggerbot class that contains the main logic
 class Trgbt:
     def __init__(self, pipe, keybind, fov, hsv_range, shooting_rate, fps):
         user32 = wdl.user32
@@ -110,6 +108,8 @@ class Trgbt:
             self.frame = self.camera.grab()
             t.sleep(self.frame_duration)  # Sleep to control FPS
 
+
+    #5903704151525355500585
     def detect_color(self):
         if self.frame is not None:
             hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
@@ -126,6 +126,7 @@ class Trgbt:
 
             return np.any(mask)
 
+    #1777207966950145096245
     def trigger(self):
         global HoldMode
         while True:
@@ -155,6 +156,7 @@ class Trgbt:
                 self.keys_pressed = False
                 self.last_key = None
 
+            #3996159448481102881626
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
                 if (self.detect_color()):
                     snd_key_evt(self.pipe)
@@ -176,6 +178,7 @@ if __name__ == "__main__":
         set_window_title()
         cl()
 
+        #2732909071539711890778
         parent_conn, child_conn = p()
         p_proc = proc(target=kbd_evt, args=(child_conn,))
         p_proc.start()
@@ -189,7 +192,6 @@ if __name__ == "__main__":
         else:
             exit(0)
 
-        # Initialize and start the Triggerbot
         trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
         th.Thread(target=trgbt.capture_frame).start()
         th.Thread(target=trgbt.trigger).start()
@@ -200,8 +202,5 @@ if __name__ == "__main__":
         pythoncom.CoUninitialize()
 
 
-#2732909071539711890778
-#3996159448481102881626
 #2684554981793375453008
-#1777207966950145096245
 #2941445331211873215082
