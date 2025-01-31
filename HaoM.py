@@ -1,8 +1,8 @@
-#2686186576886905604698
-#4738117133721163294302
-#1324330963635456269773
-#3397120260856189693435
-#7618502194193879589108
+#8150652813178998285931
+#5891167545071807663376
+#2332640935245508383090
+#1201628357695123503289
+#5903704151525355500585
 import cv2 as c2
 import time as t
 import numpy as np
@@ -19,11 +19,13 @@ import uuid
 import win32gui
 import win32process
 import win32con
+import pythoncom
 
 
-# UUID = "47e7190783f44aa5806c1f9bf7d8ead1"
+
+# UUID = "577eec55a1344625bb1b30886ab5137e"
 # Number lines can be added here
-# UUID = "47e7190783f44aa5806c1f9bf7d8ead1"
+# UUID = "577eec55a1344625bb1b30886ab5137e"
 
 HoldMode = True
 
@@ -50,7 +52,7 @@ def toggle_hold_mode():
 def cl():
     os.system('cls' if os.name == 'nt' else 'clear')
     console = win32gui.GetForegroundWindow()
-    win32gui.ShowWindow(console, win32con.SW_HIDE)
+    # win32gui.ShowWindow(console, win32con.SW_HIDE)
 
 
 # Function to simulate keyboard events
@@ -141,32 +143,37 @@ def load_cfg():
 
 
 if __name__ == "__main__":
+    pythoncom.CoInitialize()
+    try:
+        set_window_title()
+        cl()
 
-    set_window_title()
-    cl()
+        parent_conn, child_conn = p()
+        p_proc = proc(target=kbd_evt, args=(child_conn,))
+        p_proc.start()
 
-    parent_conn, child_conn = p()
-    p_proc = proc(target=kbd_evt, args=(child_conn,))
-    p_proc.start()
+        # Load or create the configuration
+        cfg = {}
+        if os.path.exists('config.json'):
+            cfg = load_cfg()
+            print("Config loaded:")
+            print(js.dumps(cfg, indent=4))
+        else:
+            exit(0)
 
-    # Load or create the configuration
-    cfg = {}
-    if os.path.exists('config.json'):
-        cfg = load_cfg()
-        print("Config loaded:")
-        print(js.dumps(cfg, indent=4))
-    else:
-        exit(0)
+        # Initialize and start the Triggerbot
+        trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
+        th.Thread(target=trgbt.capture_frame).start()
+        th.Thread(target=trgbt.trigger).start()
+        th.Thread(target=toggle_hold_mode).start()
+        p_proc.join()
+    
+    finally:
+        pythoncom.CoUninitialize()
 
-    # Initialize and start the Triggerbot
-    trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
-    th.Thread(target=trgbt.capture_frame).start()
-    th.Thread(target=trgbt.trigger).start()
-    th.Thread(target=toggle_hold_mode).start()
-    p_proc.join()
 
-#1176949343169135057719
-#6806720406002702760748
-#4063918400340015092434
-#1606719867997230306836
-#6366368272422377873386
+#2732909071539711890778
+#3996159448481102881626
+#2684554981793375453008
+#1777207966950145096245
+#2941445331211873215082
