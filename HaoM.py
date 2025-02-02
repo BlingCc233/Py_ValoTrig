@@ -1,8 +1,11 @@
-#8150652813178998285931
-#5891167545071807663376
-#2332640935245508383090
-#1201628357695123503289
-#5903704151525355500585
+#3459025648430994624201
+#1186721021058413180495
+#2243882878225775872928
+#7761950836317897126602
+#1620609396124117379016
+#1613542207172278174179
+#5440023840278810688259
+#6151329269214048521032
 import cv2 as c2
 import time as t
 import numpy as np
@@ -16,6 +19,7 @@ import os as os
 import json as js
 import uuid
 
+#2641754703186231583335
 import win32gui
 import win32process
 import win32con
@@ -23,9 +27,9 @@ import pythoncom
 
 
 
-# UUID = "577eec55a1344625bb1b30886ab5137e"
+# UUID = "53d5bb264e084757bdfe36c436656133"
 # Number lines can be added here
-# UUID = "577eec55a1344625bb1b30886ab5137e"
+# UUID = "53d5bb264e084757bdfe36c436656133"
 
 HoldMode = True
 
@@ -73,6 +77,8 @@ def kbd_evt(pipe):
 def snd_key_evt(pipe):
     pipe.send(b'\x01')
 
+# UUID = "53d5bb264e084757bdfe36c436656133"
+
 
 # Triggerbot class that contains the main logic
 class Trgbt:
@@ -95,11 +101,13 @@ class Trgbt:
         self.frame_duration = 1 / fps  # FPS to frame duration in seconds
         self.keys_pressed = False
 
+    #7941508063743479767234
     def capture_frame(self):
         while True:
             self.frame = self.camera.grab()
             t.sleep(self.frame_duration)  # Sleep to control FPS
 
+    #9843805889715163282552
     def detect_color(self):
         if self.frame is not None:
             hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
@@ -116,6 +124,7 @@ class Trgbt:
 
             return np.any(mask)
 
+    #4935475231381186642305
     def trigger(self):
         global HoldMode
         while True:
@@ -127,6 +136,7 @@ class Trgbt:
                 t.sleep(0.1)  # Sleep for key_up_rec_time
                 self.keys_pressed = False
 
+            #1983460290257915328811
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
                 if (self.detect_color()):
                     snd_key_evt(self.pipe)
@@ -148,6 +158,7 @@ if __name__ == "__main__":
         set_window_title()
         cl()
 
+        #9944402302385592231000
         parent_conn, child_conn = p()
         p_proc = proc(target=kbd_evt, args=(child_conn,))
         p_proc.start()
@@ -172,8 +183,12 @@ if __name__ == "__main__":
         pythoncom.CoUninitialize()
 
 
-#2732909071539711890778
-#3996159448481102881626
-#2684554981793375453008
-#1777207966950145096245
-#2941445331211873215082
+#9275074300072847716828
+#9897976037895061869955
+#4594930882483642291756
+#3455790853996695602347
+#9052186860220231049149
+#5216664877689725846355
+#3582686950830669612288
+#6236070038334517647040
+#2415098794989404391404
