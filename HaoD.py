@@ -1,8 +1,14 @@
-#8150652813178998285931
-#5891167545071807663376
-#1201628357695123503289
+#6408503233360301491522
+#4695572066159822484296
+#8990689134437374726797
+#2541848224673017251568
+#1148599472838751497909
+#9155157050138017650674
+#3933714307792373539061
+#7155435608031828627699
 import cv2 as c2
 import time as t
+import keyboard
 import numpy as np
 import ctypes as c
 import win32api as wapi
@@ -14,7 +20,7 @@ import os as os
 import json as js
 import uuid
 
-#2332640935245508383090
+#3612284081249116462070
 import win32gui
 import win32process
 import win32con
@@ -22,8 +28,9 @@ import pythoncom
 
 
 
-# UUID = "577eec55a1344625bb1b30886ab5137e"
+# UUID = "930d21cb1f964e8aad4bea898f06705b"
 # Number lines can be added here
+# UUID = "930d21cb1f964e8aad4bea898f06705b"
 
 HoldMode = True
 
@@ -63,11 +70,12 @@ def kbd_evt(pipe):
                 keybd_event(0x4F, 0, 0, 0)  # O key press
                 t.sleep(0.18 + np.random.uniform(0, 0.02))  # Sleep for 180~200ms
                 keybd_event(0x4F, 0, 2, 0)  # O key release
-            elif key == b'\x02':  #1777207966950145096245
-                keybd_event(0x41, 0, 0, 0)  # A key press
-                keybd_event(0x44, 0, 0, 0)  # D key press
-                keybd_event(0x41, 0, 2, 0)  # A key release
-                keybd_event(0x44, 0, 2, 0)  # D key release
+            elif key == b'\x02': # D key PR
+                keybd_event(0x44, 0, 0, 0)
+                keybd_event(0x44, 0, 2, 0)
+            elif key == b'\x03': # A key PR
+                keybd_event(0x41, 0, 0, 0)
+                keybd_event(0x41, 0, 2, 0)
         except EOFError:
             break
 
@@ -75,13 +83,17 @@ def kbd_evt(pipe):
 # Helper function to send key press
 def snd_key_evt(pipe):
     pipe.send(b'\x01')
-    
-def snd_counter_strafe(pipe):
+
+def snd_counter_strafe_d(pipe):
     pipe.send(b'\x02')
 
+def snd_counter_strafe_a(pipe):
+    pipe.send(b'\x03')
 
-# UUID = "577eec55a1344625bb1b30886ab5137e"
+# UUID = "930d21cb1f964e8aad4bea898f06705b"
 
+
+# Triggerbot class that contains the main logic
 class Trgbt:
     def __init__(self, pipe, keybind, fov, hsv_range, shooting_rate, fps):
         user32 = wdl.user32
@@ -103,13 +115,13 @@ class Trgbt:
         self.keys_pressed = False
         self.compensating = False
 
+    #6010484127259241540730
     def capture_frame(self):
         while True:
             self.frame = self.camera.grab()
             t.sleep(self.frame_duration)  # Sleep to control FPS
 
-
-    #5903704151525355500585
+    #1872519879357494096069
     def detect_color(self):
         if self.frame is not None:
             hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
@@ -125,13 +137,35 @@ class Trgbt:
             mask[center_y - 3:center_y + 3, center_x - 3:center_x + 3] = 0
 
             return np.any(mask)
+        
+    #6702203205053086890734
+    def counter_strafe(self, key):
+        if key == 'a':
+            self.compensating = True
+            snd_counter_strafe_d(self.pipe)
+            t.sleep(0.005)
+            self.compensating = False
+        elif key == 'd':
+            self.compensating = True
+            snd_counter_strafe_a(self.pipe)
+            t.sleep(0.005)
+            self.compensating = False
 
-    #1777207966950145096245
+    #8220933897305363393019
+    def setup_auto_counter_strafe(self):
+        try:
+            if not self.compensating:
+                keyboard.on_release_key('a', lambda e: th.Thread(target=self.counter_strafe, args=('a',)).start())
+                keyboard.on_release_key('d', lambda e: th.Thread(target=self.counter_strafe, args=('d',)).start())
+        except:
+            pass
+
+    #8078591336375097861984
     def trigger(self):
         global HoldMode
+
         while True:
-            if self.compensating: 
-                t.sleep(0.001)
+            if self.compensating:
                 continue
 
             w_pressed = wapi.GetAsyncKeyState(0x57) < 0
@@ -140,23 +174,15 @@ class Trgbt:
             d_pressed = wapi.GetAsyncKeyState(0x44) < 0
             
             if w_pressed or a_pressed or s_pressed or d_pressed:
-                if a_pressed:
-                    self.last_key = 0x41
-                elif d_pressed:
-                    self.last_key = 0x44
                 self.keys_pressed = True
                 continue
             elif self.keys_pressed:
-                if self.last_key in [0x41, 0x44]:  
-                    self.compensating = True  
-                    snd_counter_strafe(self.pipe)  
-                    t.sleep(0.02)  
-                    self.compensating = False  
-                
+                t.sleep(0.1)
                 self.keys_pressed = False
-                self.last_key = None
 
-            #3996159448481102881626
+
+
+            #1957318339966642693412
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
                 if (self.detect_color()):
                     snd_key_evt(self.pipe)
@@ -178,7 +204,7 @@ if __name__ == "__main__":
         set_window_title()
         cl()
 
-        #2732909071539711890778
+        #8361212090270307773148
         parent_conn, child_conn = p()
         p_proc = proc(target=kbd_evt, args=(child_conn,))
         p_proc.start()
@@ -192,9 +218,11 @@ if __name__ == "__main__":
         else:
             exit(0)
 
+        # Initialize and start the Triggerbot
         trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
         th.Thread(target=trgbt.capture_frame).start()
         th.Thread(target=trgbt.trigger).start()
+        th.Thread(target=trgbt.setup_auto_counter_strafe).start()
         th.Thread(target=toggle_hold_mode).start()
         p_proc.join()
     
@@ -202,5 +230,12 @@ if __name__ == "__main__":
         pythoncom.CoUninitialize()
 
 
-#2684554981793375453008
-#2941445331211873215082
+#7175343535290797461521
+#2450751025628005268352
+#1557510631359455073167
+#9742024989047569085814
+#3831446036707954084364
+#3584478742755646275023
+#5620448443600959192645
+#4268451040267018835222
+#8702515407104958518393
