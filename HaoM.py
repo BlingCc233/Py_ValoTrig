@@ -1,11 +1,11 @@
-#3734069754346917850084
-#6293282125533079774221
-#7643466630466666613679
-#2060451345658758418172
-#7549490605116744287243
-#1298311208004673755785
-#2961851017602988667084
-#9039204316589850917553
+#2157177301179982704991
+#9772353426039453686997
+#4743621297241619295098
+#9773325648826413549435
+#3672767508568704047545
+#7510648642424731929408
+#6169349124380551461568
+#9332970030554314678513
 import cv2 as c2
 import time as t
 import keyboard
@@ -20,7 +20,7 @@ import os as os
 import json as js
 import uuid
 
-#3877087012015648610201
+#1325081847513289512310
 import win32gui
 import win32process
 import win32con
@@ -28,9 +28,9 @@ import pythoncom
 
 
 
-# UUID = "7d01fa78489748878f8f6007e1b8be94"
+# UUID = "51aa434e46314af18a5a7e481daaf4d6"
 # Number lines can be added here
-# UUID = "7d01fa78489748878f8f6007e1b8be94"
+# UUID = "51aa434e46314af18a5a7e481daaf4d6"
 
 HoldMode = True
 
@@ -40,7 +40,7 @@ def set_window_title():
     hwnd = win32gui.GetForegroundWindow()
     win32gui.SetWindowText(hwnd, random_uuid)
     handle = win32process.GetCurrentProcess()
-    # win32process.SetProcessWorkingSetSize(handle, -1, -1)
+    win32process.SetProcessWorkingSetSize(handle, -1, -1)
 
 def toggle_hold_mode():
     global HoldMode
@@ -90,7 +90,7 @@ def snd_counter_strafe_d(pipe):
 def snd_counter_strafe_a(pipe):
     pipe.send(b'\x03')
 
-# UUID = "7d01fa78489748878f8f6007e1b8be94"
+# UUID = "51aa434e46314af18a5a7e481daaf4d6"
 
 
 # Triggerbot class that contains the main logic
@@ -115,13 +115,13 @@ class Trgbt:
         self.keys_pressed = False
         self.compensating = False
 
-    #3910050916827700114520
+    #3376531969297798834780
     def capture_frame(self):
         while True:
             self.frame = self.camera.grab()
             t.sleep(self.frame_duration)  # Sleep to control FPS
 
-    #1835590642045109253185
+    #1940164325752970134284
     def detect_color(self):
         if self.frame is not None:
             hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
@@ -138,7 +138,7 @@ class Trgbt:
 
             return np.any(mask)
         
-    #8614041754246446194588
+    #4249558245055400016018
     def counter_strafe(self, key):
         if key == 'a' and not wapi.GetAsyncKeyState(0x44) < 0:  # Only if D is not pressed
             self.compensating = True
@@ -151,7 +151,7 @@ class Trgbt:
             t.sleep(0.005)
             self.compensating = False
 
-    #4846697355452822741121
+    #6612862375652859847857
     def setup_auto_counter_strafe(self):
         try:
             if not self.compensating:
@@ -170,7 +170,7 @@ class Trgbt:
         except:
             pass
 
-    #8321307368130417739692
+    #2111152504080630427538
     def trigger(self):
         global HoldMode
 
@@ -192,7 +192,7 @@ class Trgbt:
 
 
 
-            #5392254571585205541601
+            #9040327190433994612105
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
                 if (self.detect_color()):
                     snd_key_evt(self.pipe)
@@ -214,7 +214,7 @@ if __name__ == "__main__":
         set_window_title()
         cl()
 
-        #8548166689599374014310
+        #8557499508750544242569
         parent_conn, child_conn = p()
         p_proc = proc(target=kbd_evt, args=(child_conn,))
         p_proc.start()
@@ -232,7 +232,7 @@ if __name__ == "__main__":
         trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
         th.Thread(target=trgbt.capture_frame).start()
         th.Thread(target=trgbt.trigger).start()
-        #th.Thread(target=trgbt.setup_auto_counter_strafe).start()
+        th.Thread(target=trgbt.setup_auto_counter_strafe).start()
         th.Thread(target=toggle_hold_mode).start()
         p_proc.join()
     
@@ -240,12 +240,12 @@ if __name__ == "__main__":
         pythoncom.CoUninitialize()
 
 
-#4440184344695227868240
-#8206999647518547357339
-#8578541328482484082844
-#7755050988132424355684
-#4385600764196089638199
-#5805907557001422591918
-#3132703058425513774641
-#7530259195987404875556
-#2072731673872906122265
+#8861351893092589934794
+#4510105153634756731859
+#8270896064723636838480
+#5536517156515204770210
+#2008549174125769345780
+#3934425030227897189694
+#3492992698278267128020
+#1309464641736556925014
+#1093966859726169227691
