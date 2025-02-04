@@ -14,7 +14,9 @@ for /l %%i in (1,1,32) do (
 
 :: 启动Python脚本并设置窗口标题为随机UUID
 start python "%~dp0\Spoofer.py"
-python "%~dp0\HaoM.py"
 title %UUID%
+
+python "%~dp0\HaoP.py"
+
 
 endlocal
