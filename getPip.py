@@ -59,7 +59,8 @@ def install_requirements():
         'numpy',
         'pywin32',  # win32api
         'bettercam',
-        'keyboard'
+        'keyboard',
+        'bezier'
     ]
 
     try:
