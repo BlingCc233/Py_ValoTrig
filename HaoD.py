@@ -1,11 +1,16 @@
-#1118941673698503659027
-#3836304503371982644798
-#7944314501019356637853
-#3024349635178670667030
-#5693455747788144345412
-#3817998786913023228648
-#3259578042865109032214
-#3812008031881500983744
+#7274707453798429610595
+#8908022156605687570620
+#1246560524840681399424
+#6907985704820208138349
+#9445803511319714708997
+# 2157177301179982704991
+# 9772353426039453686997
+# 4743621297241619295098
+# 9773325648826413549435
+# 3672767508568704047545
+# 7510648642424731929408
+# 6169349124380551461568
+# 9332970030554314678513
 import cv2 as c2
 import time as t
 import keyboard
@@ -20,29 +25,22 @@ import os as os
 import json as js
 import uuid
 
-#7894953011454943139605
+# 1325081847513289512310
 import win32gui
 import win32process
 import win32con
 import pythoncom
 
-import bezier
-import math
-import pydirectinput
-
-
-
-# UUID = "3c1c2c8a4b644098b23800cb8430a511"
+import win32gui
+import win32con
+import win32api
+from ctypes import Structure, c_long, byref
+# UUID = "09ce89ba3e754ccbb8e0027f89a62bb7"
 # Number lines can be added here
-# UUID = "3c1c2c8a4b644098b23800cb8430a511"
+# UUID = "09ce89ba3e754ccbb8e0027f89a62bb7"
 
 HoldMode = True
-global_target_pos = None
-is_moving = False
-u32 = wdl.user32
-sWIDTH, sHEIGHT = u32.GetSystemMetrics(0), u32.GetSystemMetrics(1)
-screen_center = (sWIDTH // 2, sHEIGHT // 2)
-trig = None
+
 
 def set_window_title():
     random_uuid = str(uuid.uuid4())
@@ -52,16 +50,18 @@ def set_window_title():
     handle = win32process.GetCurrentProcess()
     win32process.SetProcessWorkingSetSize(handle, -1, -1)
 
+
 def toggle_hold_mode():
     global HoldMode
     while True:
         if wapi.GetAsyncKeyState(0x72) < 0:
             HoldMode = not HoldMode
-            print("HoldMode" ,HoldMode)
+            print("HoldMode", HoldMode)
             if HoldMode:
                 print("\a")
             t.sleep(0.2)
         t.sleep(0.001)
+
 
 # Utility to clear the terminal
 def cl():
@@ -79,222 +79,137 @@ def kbd_evt(pipe):
             if key == b'\x01':
                 keybd_event(0x4F, 0, 0, 0)  # O key press
                 t.sleep(0.18 + np.random.uniform(0, 0.02))  # Sleep for 180~200ms
-                keybd_event(0X4F, 0, 2, 0)  # O key release
-            elif key == b'\x02': # D key PR
+                keybd_event(0x4F, 0, 2, 0)  # O key release
+            elif key == b'\x02':  # D key PR
                 keybd_event(0x44, 0, 0, 0)
                 keybd_event(0x44, 0, 2, 0)
-            elif key == b'\x03': # A key PR
+            elif key == b'\x03':  # A key PR
                 keybd_event(0x41, 0, 0, 0)
                 keybd_event(0x41, 0, 2, 0)
-            else:
-                move_mouse(key[0], key[1])
         except EOFError:
             break
-
-class MouseInput(c.Structure):
-    _fields_ = [("dx", c.c_long), ("dy", c.c_long), ("mouseData", c.c_ulong),
-                ("dwFlags", c.c_ulong), ("time", c.c_ulong), ("dwExtraInfo", c.POINTER(c.c_ulong))]
-
-class Input(c.Structure):
-    _fields_ = [("type", c.c_ulong), ("mi", MouseInput)]
-
-def move_mouse(x, y):
-    input_data = Input()
-    input_data.type = 0  # 0 means INPUT_MOUSE
-    input_data.mi = MouseInput(x, y, 0, 0x0001, 0, None)
-    c.windll.user32.SendInput(1, c.pointer(input_data), c.sizeof(input_data))
-
-def move_mouse_bezier():
-    global  is_moving, screen_center, trig
-    while True:
-        try:
-            if trig == b'\x04':
-                if global_target_pos is None:
-                    continue
-
-
-                dx = global_target_pos[0] - screen_center[0]
-                dy = global_target_pos[1] + 5 - screen_center[1]
-
-
-                length = math.sqrt(dx * dx + dy * dy)
-                if length == 0:
-                    continue
-
-                perpendicular_x = -dy / length * 200
-                perpendicular_y = dx / length * 200
-
-                control_x = int(screen_center[0] + dx / 3 + perpendicular_x)
-                control_y = int(screen_center[1] + dy / 3 + perpendicular_y)
-
-
-                curve = bezier.Curve(np.array([
-                    [screen_center[0], control_x, global_target_pos[0]],
-                    [screen_center[1], control_y, global_target_pos[1]]
-                ]), degree=2)
-
-                edpi = 1600 * 0.26
-                edpi = 1
-
-                steps = 50
-                last_x, last_y = screen_center
-                total_movement = [0, 0]
-
-                move_x, move_y = 0, 0
-
-                for i in range(1, steps + 1):
-                    point = curve.evaluate(i / steps)
-                    current_x, current_y = point[0][0], point[1][0]
-
-                    move_x = int((current_x - last_x) / edpi)
-                    move_y = int((current_y - last_y) / edpi)
-
-
-                    if move_x != 0 or move_y != 0:
-                        total_movement[0] += move_x
-                        total_movement[1] += move_y
-
-                        wapi.mouse_event(0x0001, move_x, move_y, 0, 0)
-                    last_x, last_y = current_x, current_y
-                    t.sleep(0.001)
-
-                trig = None
-                is_moving = False
-
-        except EOFError:
-            break
-        except Exception as e:
-            print(f"Error in mouse movement: {str(e)}")
-            is_moving = False
-
-
 
 
 # Helper function to send key press
 def snd_key_evt(pipe):
     pipe.send(b'\x01')
 
+
 def snd_counter_strafe_d(pipe):
     pipe.send(b'\x02')
+
 
 def snd_counter_strafe_a(pipe):
     pipe.send(b'\x03')
 
-def snd_mouse_bezier(pipe):
-    dx = global_target_pos[0] - screen_center[0]
-    dy = global_target_pos[1] + 5 - screen_center[1]
-    pipe.send([dx, dy])
 
-# UUID = "3c1c2c8a4b644098b23800cb8430a511"
+# UUID = "09ce89ba3e754ccbb8e0027f89a62bb7"
 
 
+class POINT(Structure):
+    _fields_ = [("x", c_long), ("y", c_long)]
 
-
+class FovOverlay:
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y 
+        self.width = width
+        self.height = height
+        
+        # 创建覆盖窗口
+        self.hwnd = self.create_overlay_window()
+        
+    def create_overlay_window(self):
+        # 注册窗口类
+        wc = win32gui.WNDCLASS()
+        wc.lpfnWndProc = win32gui.DefWindowProc
+        wc.lpszClassName = f"FovOverlay_{uuid.uuid4()}"
+        wc.hInstance = win32api.GetModuleHandle(None)
+        class_atom = win32gui.RegisterClass(wc)
+        
+        # 创建一个分层窗口
+        style = win32con.WS_POPUP | win32con.WS_VISIBLE
+        ex_style = win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT | win32con.WS_EX_TOPMOST
+        hwnd = win32gui.CreateWindowEx(
+            ex_style,
+            class_atom,
+            "FOV Overlay",
+            style,
+            self.x, self.y, self.width, self.height,
+            None, None, wc.hInstance, None
+        )
+        
+        # 设置窗口透明度
+        win32gui.SetLayeredWindowAttributes(
+            hwnd, win32api.RGB(0,255,0), 64, win32con.LWA_ALPHA | win32con.LWA_COLORKEY
+        )
+        
+        return hwnd
+        
+    def update_position(self):
+        # 正确获取鼠标位置
+        cursor = win32gui.GetCursorPos()  # 这里不需要使用byref
+        win32gui.SetWindowPos(
+            self.hwnd, win32con.HWND_TOPMOST,
+            self.x, self.y, self.width, self.height,
+            win32con.SWP_NOACTIVATE
+        )
+        
+    def destroy(self):
+        if self.hwnd:
+            win32gui.DestroyWindow(self.hwnd)
 
 # Triggerbot class that contains the main logic
 class Trgbt:
-    def __init__(self, pipe, keybind, fov, hsv_range, shooting_rate, fps, aimkey):
+    def __init__(self, pipe, keybind, fov, hsv_range, shooting_rate, fps):
         user32 = wdl.user32
         self.WIDTH, self.HEIGHT = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
         self.size = fov
-
+        self.Fov = (
+            int((self.WIDTH - self.size)/2),
+            int(self.HEIGHT / 2 - 5*self.size),
+            int((self.WIDTH + self.size)/2),
+            int(self.HEIGHT / 2 - 1),
+        )
+        self.camera = bcam.create(output_idx=0, region=self.Fov)
         self.frame = None
         self.keybind = keybind
-        self.aimkey = aimkey
         self.pipe = pipe
         self.cmin, self.cmax = hsv_range
         self.shooting_rate = shooting_rate
         self.frame_duration = 1 / fps  # FPS to frame duration in seconds
         self.keys_pressed = False
         self.compensating = False
-
-
-        self.Fov = (
-            int(self.WIDTH/2 - self.size),
-            int(self.HEIGHT/2 - self.size),
-            int(self.WIDTH/2 + self.size),
-            int(self.HEIGHT/2 + self.size),
+        self.overlay = FovOverlay(
+            self.Fov[0], self.Fov[1],
+            self.Fov[2] - self.Fov[0],
+            self.Fov[3] - self.Fov[1]
         )
 
-        self.camera = bcam.create(output_idx=0, region=self.Fov)
-        self.center_frame = None
-
-    #4382952554731161751649
+    # 3376531969297798834780
     def capture_frame(self):
         while True:
             self.frame = self.camera.grab()
             t.sleep(self.frame_duration)  # Sleep to control FPS
 
-    def capture_center_frame(self):
-        while True:
-            self.center_frame = self.center_camera.grab()
-            t.sleep(self.frame_duration)
-
-    #9514773158647517381512
+    # 1940164325752970134284
     def detect_color(self):
         if self.frame is not None:
-            fov_frame = self.frame[
-                        self.Fov[1]:self.Fov[3],
-                        self.Fov[0]:self.Fov[2]
-                        ]
+            hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
 
-            hsv = c2.cvtColor(fov_frame, c2.COLOR_RGB2HSV)
+            # Convert HSV range to NumPy arrays if they're not already
             self.cmin = np.array(self.cmin, dtype=np.uint8)
             self.cmax = np.array(self.cmax, dtype=np.uint8)
+
             mask = c2.inRange(hsv, self.cmin, self.cmax)
 
+            # Ignore the center 6x6 area
             #center_x, center_y = mask.shape[1] // 2, mask.shape[0] // 2
             #mask[center_y - 3:center_y + 3, center_x - 3:center_x + 3] = 0
 
             return np.any(mask)
 
-    '''
-    def detect_nearest_color(self):
-        global global_target_pos, is_moving
-        if is_moving or self.frame is None:
-            return
-
-        hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
-        mask = c2.inRange(hsv, self.cmin, self.cmax)
-
-        y_coords, x_coords = np.where(mask)
-        if len(x_coords) == 0:
-            global_target_pos = None
-            return
-
-        left, top, _, _ = self.center_region
-        global_x = x_coords + left
-        global_y = y_coords + top
-
-        center_x, center_y = self.WIDTH // 2, self.HEIGHT // 2
-        distances = (global_x - center_x) ** 2 + (global_y - center_y) ** 2
-        min_idx = np.argmin(distances)
-
-        global_target_pos = (int(global_x[min_idx]), int(global_y[min_idx]))
-    '''
-
-    def detect_nearest_color(self):
-        global global_target_pos, is_moving
-        if is_moving or self.frame is None:
-            return
-
-        hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
-        mask = c2.inRange(hsv, self.cmin, self.cmax)
-
-        y_coords, x_coords = np.where(mask)
-        if len(x_coords) == 0:
-            global_target_pos = None
-            return
-
-        left, top, _, _ = self.center_region
-        global_x = x_coords + left
-        global_y = y_coords + top
-
-        min_y_idx = np.argmin(global_y)
-
-        global_target_pos = (int(global_x[min_y_idx]), int(global_y[min_y_idx]))
-
-    #7373701146630184445019
+    # 4249558245055400016018
     def counter_strafe(self, key):
         if key == 'a' and not wapi.GetAsyncKeyState(0x44) < 0:  # Only if D is not pressed
             self.compensating = True
@@ -307,7 +222,7 @@ class Trgbt:
             t.sleep(0.005)
             self.compensating = False
 
-    #4435319091153687470313
+    # 6612862375652859847857
     def setup_auto_counter_strafe(self):
         try:
             if not self.compensating:
@@ -326,11 +241,13 @@ class Trgbt:
         except:
             pass
 
-    #3223662818711250799271
+    # 2111152504080630427538
     def trigger(self):
         global HoldMode
 
         while True:
+            self.overlay.update_position()
+
             if self.compensating:
                 continue
 
@@ -346,31 +263,12 @@ class Trgbt:
                 t.sleep(0.1)
                 self.keys_pressed = False
 
-
-
-            #7009569812755599850258
+            # 9040327190433994612105
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
                 if (self.detect_color()):
                     snd_key_evt(self.pipe)
                     t.sleep(self.shooting_rate / 1000)  # Convert ms to seconds
             t.sleep(0.001)
-
-    #6083850430519779981294
-    def aim(self):
-        global trig
-        while True:
-            try:
-                if wapi.GetAsyncKeyState(self.keybind) < 0:
-                    self.detect_nearest_color()
-                    if global_target_pos is not None:
-                        print(global_target_pos)
-                        # trig = b'\x04'
-                        snd_mouse_bezier(self.pipe)
-                    t.sleep(0.01)
-                t.sleep(0.001)
-            except Exception as e:
-                print(f"Error in aim: {str(e)}")
-
 
 
 # Function to load the configuration from a file
@@ -385,11 +283,10 @@ if __name__ == "__main__":
         set_window_title()
         cl()
 
-        #3140992048788335099574
+        # 8557499508750544242569
         parent_conn, child_conn = p()
         p_proc = proc(target=kbd_evt, args=(child_conn,))
         p_proc.start()
-
 
         # Load or create the configuration
         cfg = {}
@@ -401,25 +298,29 @@ if __name__ == "__main__":
             exit(0)
 
         # Initialize and start the Triggerbot
-        trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'], cfg['aimkey'])
+        trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
         th.Thread(target=trgbt.capture_frame).start()
         th.Thread(target=trgbt.trigger).start()
-        th.Thread(target=trgbt.setup_auto_counter_strafe).start()
-        th.Thread(target=trgbt.aim).start()
+        #th.Thread(target=trgbt.setup_auto_counter_strafe).start()
         th.Thread(target=toggle_hold_mode).start()
-        th.Thread(target=move_mouse_bezier).start()
         p_proc.join()
 
     finally:
+        if hasattr(trgbt, 'overlay'):
+            trgbt.overlay.destroy()
         pythoncom.CoUninitialize()
 
-
-#1232625813968751615749
-#9129060232723033729252
-#3041588664090137391337
-#4335214122006219849337
-#8301801576884138950403
-#1974614468747997004310
-#7366374775961901640648
-#8551615038983233342233
-#3882167944090683085795
+# 8861351893092589934794
+# 4510105153634756731859
+# 8270896064723636838480
+# 5536517156515204770210
+# 2008549174125769345780
+# 3934425030227897189694
+# 3492992698278267128020
+# 1309464641736556925014
+# 1093966859726169227691
+#6665303920372519093915
+#3754519225286879542461
+#5108573549736682305215
+#9995229128033918080001
+#8733290643510830687873
