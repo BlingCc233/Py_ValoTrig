@@ -60,7 +60,7 @@ def install_requirements():
         'pywin32',  # win32api
         'bettercam',
         'keyboard',
-        'bezier'
+        'pillow'
     ]
 
     try:
