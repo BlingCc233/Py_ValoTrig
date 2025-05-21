@@ -1,8 +1,8 @@
-#7274707453798429610595
-#8908022156605687570620
-#1246560524840681399424
-#6907985704820208138349
-#9445803511319714708997
+#4961678295879605782389
+#5658013188006130804710
+#5087435813779326061950
+#3606130809251733756865
+#1436118890815839971612
 # 2157177301179982704991
 # 9772353426039453686997
 # 4743621297241619295098
@@ -30,16 +30,14 @@ import win32gui
 import win32process
 import win32con
 import pythoncom
+import mss
 
-import win32gui
-import win32con
-import win32api
-from ctypes import Structure, c_long, byref
-# UUID = "09ce89ba3e754ccbb8e0027f89a62bb7"
+# UUID = "cd18cb52791c4549abc492ae0265dbdf"
 # Number lines can be added here
-# UUID = "09ce89ba3e754ccbb8e0027f89a62bb7"
+# UUID = "cd18cb52791c4549abc492ae0265dbdf"
 
 HoldMode = True
+Counter_Strafe = True
 
 
 def set_window_title():
@@ -62,12 +60,23 @@ def toggle_hold_mode():
             t.sleep(0.2)
         t.sleep(0.001)
 
+def toggle_cs_mode():
+    global Counter_Strafe
+    while True:
+        if wapi.GetAsyncKeyState(0x73) < 0:
+            Counter_Strafe = not Counter_Strafe
+            print("Counter_Strafe", Counter_Strafe)
+            if Counter_Strafe:
+                print("\a")
+            t.sleep(0.2)
+        t.sleep(0.001)
+
 
 # Utility to clear the terminal
 def cl():
     os.system('cls' if os.name == 'nt' else 'clear')
     console = win32gui.GetForegroundWindow()
-    #win32gui.ShowWindow(console, win32con.SW_HIDE)
+    win32gui.ShowWindow(console, win32con.SW_HIDE)
 
 
 # Function to simulate keyboard events
@@ -80,119 +89,118 @@ def kbd_evt(pipe):
                 keybd_event(0x4F, 0, 0, 0)  # O key press
                 t.sleep(0.18 + np.random.uniform(0, 0.02))  # Sleep for 180~200ms
                 keybd_event(0x4F, 0, 2, 0)  # O key release
-            elif key == b'\x02':  # D key PR
-                keybd_event(0x44, 0, 0, 0)
-                keybd_event(0x44, 0, 2, 0)
-            elif key == b'\x03':  # A key PR
-                keybd_event(0x41, 0, 0, 0)
-                keybd_event(0x41, 0, 2, 0)
         except EOFError:
             break
 
+def PR_comp(pipe):
+    """Process for sending counter-strafe key events."""
+    keybd_event = wdl.user32.keybd_event
+    mapping = {
+        b'\x02': (0x27, 0),  # press RIGHT
+        b'\x12': (0x27, 2),  # release RIGHT
+        b'\x03': (0x25, 0),  # press LEFT
+        b'\x13': (0x25, 2),  # release LEFT
+        b'\x04': (0x26, 0),  # press UP
+        b'\x14': (0x26, 2),  # release UP
+        b'\x05': (0x28, 0),  # press DOWN
+        b'\x15': (0x28, 2),  # release DOWN
+    }
+    while True:
+        try:
+            cmd = pipe.recv()
+            if cmd in mapping:
+                vk, flag = mapping[cmd]
+                keybd_event(vk, 0, flag, 0)
+        except EOFError:
+            break
 
 # Helper function to send key press
-def snd_key_evt(pipe):
-    pipe.send(b'\x01')
+def snd_key_evt(pipe):       pipe.send(b'\x01')
+def snd_counter_strafe_right(pipe): pipe.send(b'\x02')
+def release_key_evt_right(pipe):    pipe.send(b'\x12')
+def snd_counter_strafe_left(pipe):  pipe.send(b'\x03')
+def release_key_evt_left(pipe):     pipe.send(b'\x13')
+def snd_counter_strafe_up(pipe):    pipe.send(b'\x04')
+def release_key_evt_up(pipe):       pipe.send(b'\x14')
+def snd_counter_strafe_down(pipe):  pipe.send(b'\x05')
+def release_key_evt_down(pipe):     pipe.send(b'\x15')
 
 
-def snd_counter_strafe_d(pipe):
-    pipe.send(b'\x02')
+# UUID = "cd18cb52791c4549abc492ae0265dbdf"
 
-
-def snd_counter_strafe_a(pipe):
-    pipe.send(b'\x03')
-
-
-# UUID = "09ce89ba3e754ccbb8e0027f89a62bb7"
-
-
-class POINT(Structure):
-    _fields_ = [("x", c_long), ("y", c_long)]
-
-class FovOverlay:
-    def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y 
-        self.width = width
-        self.height = height
-        
-        # 创建覆盖窗口
-        self.hwnd = self.create_overlay_window()
-        
-    def create_overlay_window(self):
-        # 注册窗口类
-        wc = win32gui.WNDCLASS()
-        wc.lpfnWndProc = win32gui.DefWindowProc
-        wc.lpszClassName = f"FovOverlay_{uuid.uuid4()}"
-        wc.hInstance = win32api.GetModuleHandle(None)
-        class_atom = win32gui.RegisterClass(wc)
-        
-        # 创建一个分层窗口
-        style = win32con.WS_POPUP | win32con.WS_VISIBLE
-        ex_style = win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT | win32con.WS_EX_TOPMOST
-        hwnd = win32gui.CreateWindowEx(
-            ex_style,
-            class_atom,
-            "FOV Overlay",
-            style,
-            self.x, self.y, self.width, self.height,
-            None, None, wc.hInstance, None
-        )
-        
-        # 设置窗口透明度
-        win32gui.SetLayeredWindowAttributes(
-            hwnd, win32api.RGB(0,255,0), 64, win32con.LWA_ALPHA | win32con.LWA_COLORKEY
-        )
-        
-        return hwnd
-        
-    def update_position(self):
-        # 正确获取鼠标位置
-        cursor = win32gui.GetCursorPos()  # 这里不需要使用byref
-        win32gui.SetWindowPos(
-            self.hwnd, win32con.HWND_TOPMOST,
-            self.x, self.y, self.width, self.height,
-            win32con.SWP_NOACTIVATE
-        )
-        
-    def destroy(self):
-        if self.hwnd:
-            win32gui.DestroyWindow(self.hwnd)
 
 # Triggerbot class that contains the main logic
 class Trgbt:
-    def __init__(self, pipe, keybind, fov, hsv_range, shooting_rate, fps):
+    def __init__(self, pipe, keybind, fov, hsv_range, shooting_rate, fps, counter_strafe_fov):
         user32 = wdl.user32
         self.WIDTH, self.HEIGHT = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
         self.size = fov
         self.Fov = (
             int((self.WIDTH - self.size)/2),
-            int(self.HEIGHT / 2 - 5*self.size),
+            int(self.HEIGHT / 2 - 7*self.size),
             int((self.WIDTH + self.size)/2),
             int(self.HEIGHT / 2 - 1),
         )
+        x1 = int((self.WIDTH - self.size)/2)
+        y1 = int(self.HEIGHT / 2 - 5*self.size)
+        x2 = int((self.WIDTH + self.size)/2)
+        y2 = int(self.HEIGHT / 2 - 1)
+        left   = max(0, x1)
+        top    = max(0, y1)
+        width  = max(1, min(self.WIDTH - left, x2 - x1))
+        height = max(1, min(self.HEIGHT - top, y2 - y1))
+        self.aim_region = {
+            "left":   left,
+            "top":    top,
+            "width":  width,
+            "height": height,
+        }
         self.camera = bcam.create(output_idx=0, region=self.Fov)
+        x1 = int(self.WIDTH/2 - 3*counter_strafe_fov)
+        y1 = int(self.HEIGHT/2 - 3*counter_strafe_fov)
+        x2 = int(self.WIDTH/2 + 3*counter_strafe_fov)
+        y2 = int(self.HEIGHT/2 + 3*counter_strafe_fov)
+        left   = max(0, x1)
+        top    = max(0, y1)
+        width  = max(1, min(self.WIDTH - left, x2 - x1))
+        height = max(1, min(self.HEIGHT - top, y2 - y1))
+        self.cs_region = {
+            "left":   left,
+            "top":    top,
+            "width":  width,
+            "height": height,
+        }
+        self.cs_frame = None
         self.frame = None
         self.keybind = keybind
         self.pipe = pipe
         self.cmin, self.cmax = hsv_range
         self.shooting_rate = shooting_rate
-        self.frame_duration = 1 / fps  # FPS to frame duration in seconds
+        self.frame_duration = 1 / fps
         self.keys_pressed = False
-        self.compensating = False
-        self.overlay = FovOverlay(
-            self.Fov[0], self.Fov[1],
-            self.Fov[2] - self.Fov[0],
-            self.Fov[3] - self.Fov[1]
-        )
+        self.counter_strafing = {'w':False,'a':False,'s':False,'d':False}
+        self.counter_strafing_lock = th.Lock()
 
-    # 3376531969297798834780
+
+    #7059588831561836230712
     def capture_frame(self):
         while True:
             self.frame = self.camera.grab()
-            t.sleep(self.frame_duration)  # Sleep to control FPS
+            t.sleep(self.frame_duration)
 
-    # 1940164325752970134284
+    # def capture_frame(self):
+    #     with mss.mss() as sct:
+    #         while True:
+    #             try:
+    #                 img = sct.grab(self.cs_region)  # BGRA
+    #             except Exception as e:
+    #                 t.sleep(0.01)
+    #                 continue
+    #             arr = np.array(img)[:, :, :3]
+    #             self.frame = arr
+    #             t.sleep(self.frame_duration)
+
+    #1081469173419837235314
     def detect_color(self):
         if self.frame is not None:
             hsv = c2.cvtColor(self.frame, c2.COLOR_RGB2HSV)
@@ -203,71 +211,166 @@ class Trgbt:
 
             mask = c2.inRange(hsv, self.cmin, self.cmax)
 
-            # Ignore the center 6x6 area
-            #center_x, center_y = mask.shape[1] // 2, mask.shape[0] // 2
-            #mask[center_y - 3:center_y + 3, center_x - 3:center_x + 3] = 0
-
             return np.any(mask)
 
-    # 4249558245055400016018
-    def counter_strafe(self, key):
-        if key == 'a' and not wapi.GetAsyncKeyState(0x44) < 0:  # Only if D is not pressed
-            self.compensating = True
-            snd_counter_strafe_d(self.pipe)
-            t.sleep(0.005)
-            self.compensating = False
-        elif key == 'd' and not wapi.GetAsyncKeyState(0x41) < 0:  # Only if A is not pressed
-            self.compensating = True
-            snd_counter_strafe_a(self.pipe)
-            t.sleep(0.005)
-            self.compensating = False
+    # def detect_color(self):
+    #     if self.frame is None:
+    #         return False
+    #     hsv = c2.cvtColor(self.frame, c2.COLOR_BGR2HSV)
+    #     cmin = np.array(self.cmin, dtype=np.uint8)
+    #     cmax = np.array(self.cmax, dtype=np.uint8)
+    #     mask = c2.inRange(hsv, cmin, cmax)
+    #     return bool(mask.any())
 
-    # 6612862375652859847857
-    def setup_auto_counter_strafe(self):
-        try:
-            if not self.compensating:
-                self.last_key_released = None
+    def capture_cs_frame(self):
+        with mss.mss() as sct:
+            while True:
+                try:
+                    img = sct.grab(self.cs_region)     # BGRA
+                except Exception as e:
+                    t.sleep(0.01)
+                    continue
+                arr = np.array(img)[:, :, :3]
+                self.cs_frame = arr
+                t.sleep(self.frame_duration)
 
-                def handle_a_release(e):
-                    if not wapi.GetAsyncKeyState(0x44) < 0:  # If D is not pressed
-                        th.Thread(target=self.counter_strafe, args=('a',)).start()
+    def detect_cs_color(self):
+        if self.cs_frame is None:
+            return False
+        hsv = c2.cvtColor(self.cs_frame, c2.COLOR_BGR2HSV)
+        cmin = np.array(self.cmin, dtype=np.uint8)
+        cmax = np.array(self.cmax, dtype=np.uint8)
+        mask = c2.inRange(hsv, cmin, cmax)
+        return bool(mask.any())
 
-                def handle_d_release(e):
-                    if not wapi.GetAsyncKeyState(0x41) < 0:  # If A is not pressed
-                        th.Thread(target=self.counter_strafe, args=('d',)).start()
 
-                keyboard.on_release_key('a', handle_a_release)
-                keyboard.on_release_key('d', handle_d_release)
-        except:
-            pass
+    def counter_strafe(self):
+        global Counter_Strafe
 
-    # 2111152504080630427538
+        def check_w():
+            while True:
+                w_pressed = wapi.GetAsyncKeyState(0x57) < 0
+                down_pressed = wapi.GetAsyncKeyState(0x28) < 0
+                if w_pressed and not down_pressed:
+                    if self.detect_cs_color() and (Counter_Strafe or wapi.GetAsyncKeyState(self.keybind) < 0):
+                                snd_counter_strafe_down(self.pipe)
+                t.sleep(0.001)
+
+
+        def check_s():
+            while True:
+                s_pressed = wapi.GetAsyncKeyState(0x53) < 0
+                up_pressed = wapi.GetAsyncKeyState(0x26) < 0
+                if s_pressed and not up_pressed:
+                    if self.detect_cs_color() and (Counter_Strafe or wapi.GetAsyncKeyState(self.keybind) < 0):
+                                snd_counter_strafe_up(self.pipe)
+                t.sleep(0.001)
+
+
+        def check_a():
+            while True:
+                a_pressed = wapi.GetAsyncKeyState(0x41) < 0
+                right_pressed = wapi.GetAsyncKeyState(0x27) < 0
+                if a_pressed and not right_pressed:
+                    if self.detect_cs_color() and (Counter_Strafe or wapi.GetAsyncKeyState(self.keybind) < 0):
+                                snd_counter_strafe_right(self.pipe)
+                t.sleep(0.001)
+
+        def check_d():
+            while True:
+                d_pressed = wapi.GetAsyncKeyState(0x44) < 0
+                left_pressed = wapi.GetAsyncKeyState(0x25) < 0
+                if d_pressed and not left_pressed:
+                    if self.detect_cs_color() and (Counter_Strafe or wapi.GetAsyncKeyState(self.keybind) < 0):
+                                snd_counter_strafe_left(self.pipe)
+                t.sleep(0.001)
+
+        th.Thread(target=check_w, daemon=True).start()
+        th.Thread(target=check_s, daemon=True).start()
+        th.Thread(target=check_a, daemon=True).start()
+        th.Thread(target=check_d, daemon=True).start()
+
+    def monitor_arrow_keys(self, pipe):
+        arrow_keys = {
+            0x25: (b'\x13', 0x44),  # left -> d
+            0x26: (b'\x14', 0x53),  # up -> S
+            0x27: (b'\x12', 0x41),  # right -> a
+            0x28: (b'\x15', 0x57)   # down -> W
+        }
+        key_times = {code: 0.0 for code in arrow_keys}
+        color_check_times = {code: 0.0 for code in arrow_keys}
+
+        while True:
+            for vk_code, (release_cmd, opposite_key) in arrow_keys.items():
+                current_state = wapi.GetAsyncKeyState(vk_code) < 0
+                opposite_pressed = wapi.GetAsyncKeyState(opposite_key) < 0
+
+                if current_state:
+                    if not opposite_pressed:
+                        if key_times[vk_code] == 0.0:
+                            key_times[vk_code] = t.time()
+                        elif t.time() - key_times[vk_code] >= 0.02:
+                            pipe.send(release_cmd)
+                            # print('Key released by monitor - opposite key not pressed')
+                            key_times[vk_code] = 0.0
+                    elif opposite_pressed:
+                        if not self.detect_cs_color():
+                            if color_check_times[vk_code] == 0.0:
+                                color_check_times[vk_code] = t.time()
+                            elif t.time() - color_check_times[vk_code] >= 0.02:
+                                pipe.send(release_cmd)
+                                # print('Key released by monitor - no color detected')
+                                color_check_times[vk_code] = 0.0
+                        elif not color_check_times[vk_code] == 0.0 and t.time() - color_check_times[vk_code] >= 0.02:
+                            pipe.send(release_cmd)
+                            # print('Key released by monitor - no color detected')
+                            color_check_times[vk_code] = 0.0
+                        else:
+                            color_check_times[vk_code] = 0.0
+                else:
+                    key_times[vk_code] = 0.0
+                    color_check_times[vk_code] = 0.0
+            t.sleep(0.001)
+
+    def is_stable(self):
+        w_pressed = wapi.GetAsyncKeyState(0x57) < 0
+        a_pressed = wapi.GetAsyncKeyState(0x41) < 0
+        s_pressed = wapi.GetAsyncKeyState(0x53) < 0
+        d_pressed = wapi.GetAsyncKeyState(0x44) < 0
+        up_pressed = wapi.GetAsyncKeyState(0x26) < 0
+        down_pressed = wapi.GetAsyncKeyState(0x28) < 0
+        left_pressed = wapi.GetAsyncKeyState(0x25) < 0
+        right_pressed = wapi.GetAsyncKeyState(0x27) < 0
+
+        opposite_pressed = (
+            (w_pressed and down_pressed) or
+            (s_pressed and up_pressed) or
+            (a_pressed and right_pressed) or
+            (d_pressed and left_pressed)
+        )
+        return opposite_pressed
+
+    #1250399645114576184314
     def trigger(self):
         global HoldMode
 
         while True:
-            self.overlay.update_position()
-
-            if self.compensating:
-                continue
+            #5327509531647931282962
 
             w_pressed = wapi.GetAsyncKeyState(0x57) < 0
             a_pressed = wapi.GetAsyncKeyState(0x41) < 0
             s_pressed = wapi.GetAsyncKeyState(0x53) < 0
             d_pressed = wapi.GetAsyncKeyState(0x44) < 0
-
-            if w_pressed or a_pressed or s_pressed or d_pressed:
-                self.keys_pressed = True
-                continue
-            elif self.keys_pressed:
-                t.sleep(0.1)
-                self.keys_pressed = False
-
-            # 9040327190433994612105
+            key_pressed = any([w_pressed, a_pressed, s_pressed, d_pressed])
             if (HoldMode or wapi.GetAsyncKeyState(self.keybind) < 0):
-                if (self.detect_color()):
-                    snd_key_evt(self.pipe)
-                    t.sleep(self.shooting_rate / 1000)  # Convert ms to seconds
+                if not key_pressed:
+                    if self.detect_color():
+                        snd_key_evt(self.pipe)
+                        t.sleep(self.shooting_rate / 1000)
+                else:
+                    if (self.detect_color() and self.is_stable()):
+                        snd_key_evt(self.pipe)
+                        t.sleep(self.shooting_rate / 1000)
             t.sleep(0.001)
 
 
@@ -283,10 +386,12 @@ if __name__ == "__main__":
         set_window_title()
         cl()
 
-        # 8557499508750544242569
+        #7772201228164039549551
         parent_conn, child_conn = p()
-        p_proc = proc(target=kbd_evt, args=(child_conn,))
-        p_proc.start()
+        p1 = proc(target=kbd_evt, args=(child_conn,))
+        p2 = proc(target=PR_comp, args=(child_conn,))
+        p1.start()
+        p2.start()
 
         # Load or create the configuration
         cfg = {}
@@ -298,29 +403,32 @@ if __name__ == "__main__":
             exit(0)
 
         # Initialize and start the Triggerbot
-        trgbt = Trgbt(parent_conn, cfg['keybind'], cfg['fov'], cfg['hsv_range'], cfg['shooting_rate'], cfg['fps'])
-        th.Thread(target=trgbt.capture_frame).start()
-        th.Thread(target=trgbt.trigger).start()
-        #th.Thread(target=trgbt.setup_auto_counter_strafe).start()
-        th.Thread(target=toggle_hold_mode).start()
-        p_proc.join()
+        trgbt = Trgbt(
+            parent_conn,
+            cfg['keybind'],
+            cfg['shoot_fov'],
+            cfg['hsv_range'],
+            cfg['shooting_rate'],
+            cfg['fps'],
+            cfg['counter_strafe_fov'],
+        )
+        th.Thread(target=trgbt.capture_frame, daemon=True).start()
+        th.Thread(target=trgbt.trigger, daemon=True).start()
+        th.Thread(target=trgbt.capture_cs_frame, daemon=True).start()
+        th.Thread(target=trgbt.counter_strafe, daemon=True).start()
+        th.Thread(target=toggle_hold_mode, daemon=True).start()
+        th.Thread(target=toggle_cs_mode, daemon=True).start()
+        th.Thread(target=trgbt.monitor_arrow_keys, args=(parent_conn,), daemon=True).start()
+
+        p1.join()
+        p2.join()
 
     finally:
-        if hasattr(trgbt, 'overlay'):
-            trgbt.overlay.destroy()
         pythoncom.CoUninitialize()
 
-# 8861351893092589934794
-# 4510105153634756731859
-# 8270896064723636838480
-# 5536517156515204770210
-# 2008549174125769345780
-# 3934425030227897189694
-# 3492992698278267128020
-# 1309464641736556925014
-# 1093966859726169227691
-#6665303920372519093915
-#3754519225286879542461
-#5108573549736682305215
-#9995229128033918080001
-#8733290643510830687873
+
+#3272998007079777629464
+#5324533394133214610904
+#2267161548092370328741
+#8385797452554038038053
+#7584258559495006655514
